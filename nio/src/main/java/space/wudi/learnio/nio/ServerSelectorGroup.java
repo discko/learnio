@@ -2,63 +2,73 @@ package space.wudi.learnio.nio;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
-import java.util.concurrent.locks.LockSupport;
+import java.nio.channels.SocketChannel;
+import java.util.function.Function;
 
 
 public class ServerSelectorGroup {
-    private ServerSocketChannel[] servers;
-    private SelectorRunnable serverRunnable;
-    private SelectorRunnable[] workerRunnables;
+    /** array of accepting channels */
+    private final ServerSocketChannel[] acceptChannels;
+    /** the container of accepting channels */
+    private final SelectorRunnable acceptRunnable;
+    /** the containers of worker channels */
+    private final SelectorRunnable[] workerRunnables;
 
-
-    public ServerSelectorGroup(int port, int workers) throws IOException {
-        this(new int[]{port}, workers);
+    /**
+     * init a server with specific port (on localhost) and workers num of workers
+     * @param port server port to bind
+     * @param workers   num of workers
+     * @param clientHandlerBuilder a function returns a {@link ClientHandler} implementation according to {@link SocketChannel} info
+     * @throws IOException if IO errors occur
+     */
+    public ServerSelectorGroup(int port, int workers, Function<SocketChannel, Class<? extends ClientHandler>> clientHandlerBuilder) throws IOException {
+        this(new int[]{port}, workers, clientHandlerBuilder);
     }
 
-    public ServerSelectorGroup(int[] ports, int workers) throws IOException {
+    /**
+     * init several servers with specific ports (all on localhost) and workers num of workers
+     * @param ports an array of ports of servers to bind
+     * @param workers   total num of workers
+     * @param clientHandlerBuilder a function returns a {@link ClientHandler} implementation according to {@link SocketChannel} info
+     * @throws IOException if IO errors occur
+     */
+    public ServerSelectorGroup(int[] ports, int workers, Function<SocketChannel, Class<? extends ClientHandler>> clientHandlerBuilder) throws IOException {
         System.out.println("preparing workers");
         workerRunnables = new SelectorRunnable[workers];
         for (int i = 0; i < workers; i++) {
-            workerRunnables[i] = new SelectorRunnable();
+            workerRunnables[i] = new SelectorRunnable(clientHandlerBuilder);
             new Thread(workerRunnables[i], "WorkerThread-"+i).start();
         }
 
         System.out.println("preparing server");
-        servers = new ServerSocketChannel[ports.length];
-        serverRunnable = new SelectorRunnable();
+        acceptChannels = new ServerSocketChannel[ports.length];
+        acceptRunnable = new SelectorRunnable(null);
 
-        serverRunnable.setWorkers(workerRunnables);
+        acceptRunnable.setWorkers(workerRunnables);
 
-
-        new Thread(serverRunnable, "ServerThread").start();
+        // start the thead with accept channel
+        new Thread(acceptRunnable, "ServerThread").start();
         for (int i = 0; i < ports.length; i++) {
-            servers[i] = ServerSocketChannel.open();
-            servers[i].bind(new InetSocketAddress(ports[i]));
-            servers[i].configureBlocking(false);
-//            System.out.println("before get key");
-//            SelectionKey key = serverRunnable.register(servers[i], SelectionKey.OP_ACCEPT, null);
-//            System.out.println("outside "+ key);
-            serverRunnable.addRegisterQueueAndWakeUpSelector(new RegisterHolder.ServerRegisterHolder(servers[i]));
+            acceptChannels[i] = ServerSocketChannel.open();
+            acceptChannels[i].bind(new InetSocketAddress(ports[i]));
+            acceptChannels[i].configureBlocking(false); // set accept channel non-blocking
+            // register accept channel into selector
+            acceptRunnable.addRegisterQueueAndWakeUpSelector(new RegisterHolder.ServerRegisterHolder(acceptChannels[i]));
             System.out.println("server add to queue");
         }
         System.out.println("init done");
     }
-
-    public ServerSocketChannel[] getServers() {
-        return servers;
+    @SuppressWarnings("unused")
+    public ServerSocketChannel[] getAcceptChannels() {
+        return acceptChannels;
     }
-
-    public SelectorRunnable getServerRunnable() {
-        return serverRunnable;
+    @SuppressWarnings("unused")
+    public SelectorRunnable getAcceptRunnable() {
+        return acceptRunnable;
     }
-
+    @SuppressWarnings("unused")
     public SelectorRunnable[] getWorkerRunnables() {
         return workerRunnables;
-    }
-
-    public void park(){
-        LockSupport.park();
     }
 }
