@@ -33,6 +33,7 @@ public class TestBioBuffer {
         flag = true;
         Timer timer = new Timer();
         timer.schedule(new TimerTask() {
+            @Override
             public void run() { flag = false; }
         }, delay);
         return timer;
