@@ -9,7 +9,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.net.SocketAddress;
 import java.util.Collection;
-import java.util.List;
 import java.util.function.Function;
 
 public class AcceptHandler extends ChannelInboundHandlerAdapter {
@@ -37,7 +36,7 @@ public class AcceptHandler extends ChannelInboundHandlerAdapter {
         System.out.println(Thread.currentThread().getName()+"-"+"new client connected: "+client.remoteAddress());
         ChannelPipeline pipeline = client.pipeline();
         for (ChannelInboundHandler handler: handlersBuilder.apply(ctx.channel().remoteAddress())) {
-            client.pipeline().addLast(handler);
+            pipeline.addLast(handler);
         }
         group.register(client);
     }
