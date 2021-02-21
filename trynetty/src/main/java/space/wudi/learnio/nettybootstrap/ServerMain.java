@@ -4,6 +4,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -26,15 +27,20 @@ public class ServerMain {
         serverBootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         serverBootstrap.option(ChannelOption.SO_KEEPALIVE, true);
 
-        serverBootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
-            @Override
-            protected void initChannel(SocketChannel ch) {
-                ch.pipeline().addLast(new ClientHandler());
-            }
-        });
+        serverBootstrap.childHandler(new ChannelInit());
 
         serverBootstrap.bind(new InetSocketAddress(12306)).sync();
         System.out.println("server started");
         LockSupport.park();
+    }
+
+    static class ChannelInit extends ChannelInitializer<SocketChannel> {
+
+        @Override
+        protected void initChannel(SocketChannel ch) {
+            ChannelPipeline pipeline = ch.pipeline();
+            System.out.println("in init pipeline: "+pipeline.toMap());
+            pipeline.addLast(new ClientHandler());
+        }
     }
 }

@@ -1,5 +1,6 @@
 package space.wudi.learnio.netty;
 
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -8,6 +9,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.function.Function;
 
@@ -39,5 +41,6 @@ public class AcceptHandler extends ChannelInboundHandlerAdapter {
             pipeline.addLast(handler);
         }
         group.register(client);
+        client.writeAndFlush(Unpooled.copiedBuffer("欢迎来到智能对话机~\n", StandardCharsets.UTF_8));
     }
 }

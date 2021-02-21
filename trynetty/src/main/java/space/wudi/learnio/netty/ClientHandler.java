@@ -20,18 +20,18 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         ByteBuf byteBuffer = (ByteBuf) msg;
         String sentence = ((String) byteBuffer.readCharSequence(byteBuffer.readableBytes(), StandardCharsets.UTF_8)).trim();
         System.out.println(Thread.currentThread().getName()+"-"+ctx.name()+" client "+ ctx.channel().remoteAddress() + ": "+sentence);
         if("quit".equals(sentence)){
-            ctx.writeAndFlush(toByteBuf("Bye~")).sync();
+            ctx.writeAndFlush(toByteBuf("Bye~"));
             System.out.println(Thread.currentThread().getName()+"-"+ctx.name()+" disconnecting the client "+ctx.channel().remoteAddress());
-            ctx.disconnect().sync();
+            ctx.disconnect();
             return;
         }
         String outSentence = getReply(sentence);
-        ctx.writeAndFlush(toByteBuf(outSentence)).sync();
+        ctx.writeAndFlush(toByteBuf(outSentence));
         System.out.println(Thread.currentThread().getName()+"-"+ctx.name()+ "to client "+ctx.channel().remoteAddress()+": "+outSentence);
     }
 
